@@ -9,6 +9,7 @@ export async function main(ns) {
 	while (true) {
 		let currentStats = getPlayerStats(); // Update player's HP and Stamina
 		let currentAction = bladeburner.getCurrentAction().name; // Get the player's current Bladeburner action
+		upgradeSkill(ns);
 		//let bonusTime = bladeburner.getBonusTime();
 		//ns.print("Player HP %: " + getPlayerHP());
 		//ns.print("Player Stamina %: " + getStaminaPercentage());
@@ -58,7 +59,7 @@ export async function main(ns) {
 				await ns.sleep(time);
 			}
 		} // If Assassination is available, do so
-		else if (getSuccess("operation", "Assassination").maxSuccess >= 0.95) {
+		else if (getSuccess("operation", "Assassination").maxSuccess >= 0.95 && bladeburner.getActionCountRemaining("operation", "Assassination") > 1) {
 			if (getSuccess("operation", "Assassination").minSuccess < 0.95) {
 				while (getSuccess("operation", "Assassination").minSuccess != getSuccess("operation", "Assassination").maxSuccess) {
 					if (currentAction != "Field Analysis") {
@@ -76,8 +77,8 @@ export async function main(ns) {
 			}
 			time = getSleepTime("operation", "Assassination");
 		} // If Assassination is unavailable, check if Bounty Hunting is available, do so
-		else if (getSuccess("contract", "Bounty Hunter").maxSuccess > 0.70) {
-			if (getSuccess("contract", "Bounty Hunter").minSuccess < 0.70) {
+		else if (getSuccess("contract", "Bounty Hunter").maxSuccess > 0.90 && bladeburner.getActionCountRemaining("contract", "Bounty Hunter") > 1) {
+			if (getSuccess("contract", "Bounty Hunter").minSuccess < 0.90) {
 				while (getSuccess("contract", "Bounty Hunter").minSuccess != getSuccess("contract", "Bounty Hunter").maxSuccess) {
 					if (currentAction != "Field Analysis") {
 						bladeburner.startAction("general", "Field Analysis");
@@ -153,3 +154,25 @@ export async function main(ns) {
 		return calcTime;
 	}
 }
+
+function upgradeSkill(ns) {
+	for (const skill of skillList) {
+		// purchase skills based on available funds and priority; see skillList
+		if (ns.bladeburner.getSkillPoints() >= ns.bladeburner.getSkillUpgradeCost(skill.name) && ns.bladeburner.getSkillLevel(skill.name) != skill.limit) {
+			// It only makes sense to upgrade Digital Observer when we're closer to switching to operations
+            if (skill.name != "Digital Observer" || (ns.bladeburner.getSkillLevel("Blade's Intuition") >= 20)) {
+				ns.print("Upgrade " + skill.name + " to " + (ns.bladeburner.getSkillLevel(skill.name) + 1));
+				ns.bladeburner.upgradeSkill(skill.name);
+			}
+		}
+	}
+}
+
+const skillList = [
+    // lower priority value -> upgrade faster
+    { limit: 90, name: "Overclock" },
+	{ limit: -1, name: "Blade's Intuition" },
+	{ limit: -1, name: "Digital Observer" },
+    { limit: 25, name: "Cloak" },
+    { limit: 25, name: "Short-Circuit" }    
+];
